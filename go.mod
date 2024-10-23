@@ -2,11 +2,11 @@ module github.com/u2u-labs/layerg-kit
 
 go 1.22.0
 
-replace github.com/doublemo/nakama-common => ../nakama-common
+replace github.com/u2u-labs/go-layerg-common => ../go-layerg-common
 
 require (
-	github.com/doublemo/nakama-common v0.0.0-00010101000000-000000000000
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+	github.com/u2u-labs/go-layerg-common v0.0.0-20240824075935-3226095dd2f8
 	go.etcd.io/etcd v3.3.27+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.14
 	go.uber.org/atomic v1.11.0
@@ -32,7 +32,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
-	github.com/u2u-labs/go-layerg-common v0.0.0-20240816183602-e1c90a3ecf4e
 	go.etcd.io/etcd/api/v3 v3.5.14 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.5.14 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
