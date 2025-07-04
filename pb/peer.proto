@@ -8,6 +8,7 @@
  import "google/protobuf/timestamp.proto";
  import "google/protobuf/wrappers.proto";
  import "api/api.proto";
+ import "api/api_any.proto";
  import "rtapi/realtime.proto";
  
  option go_package = "github.com/u2u-labs/layerg-kit/pb";
@@ -18,49 +19,74 @@
  
  option csharp_namespace = "LayerG.Protobuf";
 
- service Peer {
-    rpc Call(Request) returns(ResponseWriter);
-    rpc Stream(stream Request) returns(stream ResponseWriter);
+ service PeerApi {
+    rpc Call(Peer.Request) returns(Peer.ResponseWriter);
+    rpc Stream(stream Peer.Request) returns(stream Peer.ResponseWriter);
 }
 
-message Request {
-    map<string, string> context = 1;
-    oneof payload {
-        string ping = 2;
-        string singleSocket = 3;
-        Disconnect disconnect = 4;
-        ResponseWriter out = 5;
-        api.Request in = 6;
-        Party.JoinRequest partyJoinRequest = 7;
-        Party.Promote partyPromote = 8;
-        Party.Accept partyAccept = 9;
-        Party.Remove partyRemove = 10;
-        Party.Close partyClose = 11;
-        Party.JoinRequestList partyJoinRequestList = 12;
-        Party.MatchmakerAdd partyMatchmakerAdd = 13;
-        Party.MatchmakerRemove partyMatchmakerRemove = 14;
-        Party.DataSend partyDataSend = 15;
-        string matchId = 16;
-        Match.JoinAttempt matchJoinAttempt = 17;
-        Match.SendData matchSendData = 18;
-        Match.Signal matchSignal = 19;
-        string matchState = 20;
+message Peer{
+    message Query {
+        repeated string value = 1;
     }
-}
 
-message ResponseWriter {
-    map<string, string> context = 1;
-    repeated Recipienter recipient = 2;
-    oneof payload {
-        realtime.Envelope envelope = 3;
-        string pong = 4;
-        Party.JoinRequestListReply partyJoinRequestList = 5;
-        Party.PartyMatchmakerAddReply PartyMatchmakerAdd = 6;
-        bool partyJoinRequest = 7;
-        api.Match match = 8;
-        Match.JoinAttemptReply mathJoinAttempt = 9;
-        string matchSignal = 10;
-        Match.State matchState = 11;
+    message Request {
+        string cid = 1;
+        string name = 2;
+        map<string, string> header = 3;
+        map<string, Query> query = 4;
+        map<string, string> context = 5;
+        oneof payload {
+            bytes bytesContent = 6;
+            string stringContent = 7;
+        }
+    }
+
+    message ResponseWriter {
+        string cid = 1;
+        string name = 2;
+        map<string, string> header = 3;
+        map<string, string> context = 4;
+        repeated Recipienter recipient = 5;
+        oneof payload {
+            bytes bytesContent = 6;
+            string stringContent = 7;
+            realtime.Notifications notifications = 8;
+        }
+    }
+
+    message Envelope{
+        string cid = 1;
+        map<string, string> context = 2;
+        repeated Recipienter recipient = 3;
+        oneof payload {
+            string singleSocket = 4;
+            Disconnect disconnect = 5;
+            Party.JoinRequest partyJoinRequest = 6;
+            bool partyJoinRequestReply = 7;
+            Party.Promote partyPromote = 8;
+            Party.Accept partyAccept = 9;
+            Party.Remove partyRemove = 10;
+            Party.Close partyClose = 11;
+            Party.JoinRequestList partyJoinRequestList = 12;
+            Party.JoinRequestListReply partyJoinRequestListReply = 13;
+            Party.MatchmakerAdd partyMatchmakerAdd = 14;
+            Party.MatchmakerAddReply PartyMatchmakerAddReply = 15;
+            Party.MatchmakerRemove partyMatchmakerRemove = 16;
+            Party.DataSend partyDataSend = 17;
+            string matchId = 18;
+            Match.JoinAttempt matchJoinAttempt = 19;
+            Match.JoinAttemptReply mathJoinAttemptReply = 20;
+            Match.SendData matchSendData = 21;
+            Match.Signal matchSignal = 22;
+            string matchState = 23;
+            api.Match match = 24;
+            realtime.Error error = 25;
+            string ping = 26;
+            string pong = 27;
+            string matchSignalReply = 28;
+            Match.State matchStateReply = 29;
+            realtime.Envelope nkEnvelope = 30;
+        }
     }
 }
 
@@ -85,10 +111,10 @@ message Frame {
     string node = 3;
     google.protobuf.Timestamp timestamp = 4;
     oneof payload {
-        Request request = 5;
-        ResponseWriter responseWriter = 6;
-        BinaryLog binaryLog = 7;
-        Status status = 8;
+        Peer.Envelope envelope = 5;
+        BinaryLog binaryLog = 6;
+        Status status = 7;
+        api.AnyRequest event = 8;
     }
 }
 
@@ -100,11 +126,14 @@ message Disconnect {
 
 message State {
     string node = 1;
-    repeated BinaryLog binaryLog = 2;
+    repeated StateNode nodes = 2; 
+}
+
+message StateNode {
+    string node = 1;
+    int64  version = 2;
     repeated Presence Presences = 3; 
-    CheckPoint checkPoint = 4;
-    uint64 version = 5;
-    repeated MatchmakerExtract matchmaker = 6;
+    repeated MatchmakerExtract matchmaker = 4;
 }
 
 message Status {
@@ -198,6 +227,9 @@ message NodeMeta {
 
     // 允许流连接
     bool allowStream = 9;
+
+    // Leader
+    bool leader = 10;
 }
 
 message BanValue {
@@ -219,21 +251,20 @@ message MatchBatch {
 }
 
 message BinaryLog {
-    uint64 id = 1;
-    string node = 2;
-    google.protobuf.Timestamp timestamp = 3;
+    string node = 1;
+    int64 version = 2;
     oneof payload {
-        Presence track = 4;
-        UntrackValue untrack = 5;
-        BanValue ban = 6;
-        Presence updateTrack = 7;
-        MatchmakerExtract MatchmakerAdd = 8;
-        MatchmakerExtract MatchmakerRemoveSession = 9;
-        MatchmakerExtract MatchmakerRemoveSessionAll = 10;
-        MatchmakerExtract MatchmakerRemoveParty = 11;
-        MatchmakerExtract MatchmakerRemovePartyAll = 12;
-        MatchmakerExtract MatchmakerRemoveAll = 13;
-        PartyMatchmakerRemove MatchmakerRemove = 14;
+        Presence track = 3;
+        UntrackValue untrack = 4;
+        BanValue ban = 5;
+        Presence updateTrack = 6;
+        MatchmakerExtract MatchmakerAdd = 7;
+        MatchmakerExtract MatchmakerRemoveSession = 8;
+        MatchmakerExtract MatchmakerRemoveSessionAll = 9;
+        MatchmakerExtract MatchmakerRemoveParty = 10;
+        MatchmakerExtract MatchmakerRemovePartyAll = 11;
+        MatchmakerExtract MatchmakerRemoveAll = 12;
+        PartyMatchmakerRemove MatchmakerRemove = 13;
     }
 
 
@@ -338,7 +369,7 @@ message Party {
         map<string, double> numericProperties = 9;
     }
 
-    message PartyMatchmakerAddReply {
+    message MatchmakerAddReply {
         string ticket = 1;
         repeated PresenceID presenceID = 2;
     }

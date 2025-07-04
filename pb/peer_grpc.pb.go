@@ -22,133 +22,133 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Peer_Call_FullMethodName   = "/layerg.peer.Peer/Call"
-	Peer_Stream_FullMethodName = "/layerg.peer.Peer/Stream"
+	PeerApi_Call_FullMethodName   = "/layerg.peer.PeerApi/Call"
+	PeerApi_Stream_FullMethodName = "/layerg.peer.PeerApi/Stream"
 )
 
-// PeerClient is the client API for Peer service.
+// PeerApiClient is the client API for PeerApi service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type PeerClient interface {
-	Call(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseWriter, error)
-	Stream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Request, ResponseWriter], error)
+type PeerApiClient interface {
+	Call(ctx context.Context, in *Peer_Request, opts ...grpc.CallOption) (*Peer_ResponseWriter, error)
+	Stream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Peer_Request, Peer_ResponseWriter], error)
 }
 
-type peerClient struct {
+type peerApiClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewPeerClient(cc grpc.ClientConnInterface) PeerClient {
-	return &peerClient{cc}
+func NewPeerApiClient(cc grpc.ClientConnInterface) PeerApiClient {
+	return &peerApiClient{cc}
 }
 
-func (c *peerClient) Call(ctx context.Context, in *Request, opts ...grpc.CallOption) (*ResponseWriter, error) {
+func (c *peerApiClient) Call(ctx context.Context, in *Peer_Request, opts ...grpc.CallOption) (*Peer_ResponseWriter, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ResponseWriter)
-	err := c.cc.Invoke(ctx, Peer_Call_FullMethodName, in, out, cOpts...)
+	out := new(Peer_ResponseWriter)
+	err := c.cc.Invoke(ctx, PeerApi_Call_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *peerClient) Stream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Request, ResponseWriter], error) {
+func (c *peerApiClient) Stream(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[Peer_Request, Peer_ResponseWriter], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Peer_ServiceDesc.Streams[0], Peer_Stream_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &PeerApi_ServiceDesc.Streams[0], PeerApi_Stream_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[Request, ResponseWriter]{ClientStream: stream}
+	x := &grpc.GenericClientStream[Peer_Request, Peer_ResponseWriter]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Peer_StreamClient = grpc.BidiStreamingClient[Request, ResponseWriter]
+type PeerApi_StreamClient = grpc.BidiStreamingClient[Peer_Request, Peer_ResponseWriter]
 
-// PeerServer is the server API for Peer service.
-// All implementations must embed UnimplementedPeerServer
+// PeerApiServer is the server API for PeerApi service.
+// All implementations must embed UnimplementedPeerApiServer
 // for forward compatibility.
-type PeerServer interface {
-	Call(context.Context, *Request) (*ResponseWriter, error)
-	Stream(grpc.BidiStreamingServer[Request, ResponseWriter]) error
-	mustEmbedUnimplementedPeerServer()
+type PeerApiServer interface {
+	Call(context.Context, *Peer_Request) (*Peer_ResponseWriter, error)
+	Stream(grpc.BidiStreamingServer[Peer_Request, Peer_ResponseWriter]) error
+	mustEmbedUnimplementedPeerApiServer()
 }
 
-// UnimplementedPeerServer must be embedded to have
+// UnimplementedPeerApiServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedPeerServer struct{}
+type UnimplementedPeerApiServer struct{}
 
-func (UnimplementedPeerServer) Call(context.Context, *Request) (*ResponseWriter, error) {
+func (UnimplementedPeerApiServer) Call(context.Context, *Peer_Request) (*Peer_ResponseWriter, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Call not implemented")
 }
-func (UnimplementedPeerServer) Stream(grpc.BidiStreamingServer[Request, ResponseWriter]) error {
+func (UnimplementedPeerApiServer) Stream(grpc.BidiStreamingServer[Peer_Request, Peer_ResponseWriter]) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
 }
-func (UnimplementedPeerServer) mustEmbedUnimplementedPeerServer() {}
-func (UnimplementedPeerServer) testEmbeddedByValue()              {}
+func (UnimplementedPeerApiServer) mustEmbedUnimplementedPeerApiServer() {}
+func (UnimplementedPeerApiServer) testEmbeddedByValue()                 {}
 
-// UnsafePeerServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to PeerServer will
+// UnsafePeerApiServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PeerApiServer will
 // result in compilation errors.
-type UnsafePeerServer interface {
-	mustEmbedUnimplementedPeerServer()
+type UnsafePeerApiServer interface {
+	mustEmbedUnimplementedPeerApiServer()
 }
 
-func RegisterPeerServer(s grpc.ServiceRegistrar, srv PeerServer) {
-	// If the following call pancis, it indicates UnimplementedPeerServer was
+func RegisterPeerApiServer(s grpc.ServiceRegistrar, srv PeerApiServer) {
+	// If the following call pancis, it indicates UnimplementedPeerApiServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Peer_ServiceDesc, srv)
+	s.RegisterService(&PeerApi_ServiceDesc, srv)
 }
 
-func _Peer_Call_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
+func _PeerApi_Call_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Peer_Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PeerServer).Call(ctx, in)
+		return srv.(PeerApiServer).Call(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Peer_Call_FullMethodName,
+		FullMethod: PeerApi_Call_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PeerServer).Call(ctx, req.(*Request))
+		return srv.(PeerApiServer).Call(ctx, req.(*Peer_Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Peer_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(PeerServer).Stream(&grpc.GenericServerStream[Request, ResponseWriter]{ServerStream: stream})
+func _PeerApi_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(PeerApiServer).Stream(&grpc.GenericServerStream[Peer_Request, Peer_ResponseWriter]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Peer_StreamServer = grpc.BidiStreamingServer[Request, ResponseWriter]
+type PeerApi_StreamServer = grpc.BidiStreamingServer[Peer_Request, Peer_ResponseWriter]
 
-// Peer_ServiceDesc is the grpc.ServiceDesc for Peer service.
+// PeerApi_ServiceDesc is the grpc.ServiceDesc for PeerApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Peer_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "layerg.peer.Peer",
-	HandlerType: (*PeerServer)(nil),
+var PeerApi_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "layerg.peer.PeerApi",
+	HandlerType: (*PeerApiServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Call",
-			Handler:    _Peer_Call_Handler,
+			Handler:    _PeerApi_Call_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Stream",
-			Handler:       _Peer_Stream_Handler,
+			Handler:       _PeerApi_Stream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

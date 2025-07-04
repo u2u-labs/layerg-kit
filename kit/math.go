@@ -65,20 +65,19 @@ func RandomWheel(rate, base float64) bool {
 	if rate >= base {
 		return true
 	}
-	r := Rand()
 	rnd := rate / base
-	return rnd > r.Float64()
+	return rnd > mrand.Float64()
 }
 
 func RandomBetweenFloat64(min, max float64) float64 {
 	if max <= min {
 		return min
 	}
-	return min + Rand().Float64()*(max-min)
+	return min + mrand.Float64()*(max-min)
 }
 
 func RandomBetween(min, max int) int {
-	return Rand().Intn(max-min+1) + min
+	return mrand.Intn(max-min+1) + min
 }
 
 func RandomBetweenV2(min int, max int) int {

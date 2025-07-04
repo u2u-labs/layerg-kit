@@ -65,7 +65,7 @@ func (c *EtcdClientv3Config) Valid() error {
 	}
 
 	if c.ServicePrefix == "" {
-		c.ServicePrefix = "/layerg/services/"
+		c.ServicePrefix = "/layerg-core/services/"
 	}
 
 	return nil
@@ -94,7 +94,7 @@ func (c *EtcdClientv3Config) Clone() *EtcdClientv3Config {
 
 func NewEtcdClientv3Config() *EtcdClientv3Config {
 	return &EtcdClientv3Config{
-		ServicePrefix: "/layerg/services/",
+		ServicePrefix: "/layerg-core/services/",
 	}
 }
 
@@ -253,6 +253,10 @@ func (c *EtcdClientV3) Key(name string) string {
 	}
 	key += name
 	return key
+}
+
+func (c *EtcdClientV3) GetClient() *clientv3.Client {
+	return c.cli
 }
 
 func bindPeerEtcdV3Config2V3Config(c *EtcdClientv3Config) (*clientv3.Config, error) {

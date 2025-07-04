@@ -30,7 +30,7 @@ import (
 )
 
 type Server struct {
-	pb.PeerServer
+	pb.PeerApiServer
 	name                 string
 	role                 string
 	ctx                  context.Context
@@ -79,12 +79,15 @@ func NewServer(logger *zap.Logger, md map[string]string, handler ServerHandler, 
 		grpc.MaxSendMsgSize(c.GetGrpc().MaxSendMsgSize),
 		grpc.MaxRecvMsgSize(c.GetGrpc().MaxRecvMsgSize),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-			MinTime:             5 * time.Second,
+			MinTime:             time.Duration(c.GetGrpc().KeepAliveTime) * time.Second,
 			PermitWithoutStream: true,
 		}),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time:    time.Duration(c.GetGrpc().KeepAliveTime) * time.Second,
-			Timeout: time.Duration(c.GetGrpc().KeepAliveTimeout) * time.Second,
+			MaxConnectionIdle: 500 * time.Second,
+			//MaxConnectionAge:      30 * time.Second,
+			MaxConnectionAgeGrace: 5 * time.Second,
+			Time:                  time.Duration(c.GetGrpc().KeepAliveTime) * time.Second,
+			Timeout:               time.Duration(c.GetGrpc().KeepAliveTimeout) * time.Second,
 		}),
 	}
 
@@ -112,7 +115,7 @@ func NewServer(logger *zap.Logger, md map[string]string, handler ServerHandler, 
 	)
 
 	port := c.GetGrpc().Port
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		if c.GetGrpc().Port == 0 {
 			port = RandomBetween(c.GetGrpc().MinPort, c.GetGrpc().MaxPort)
 		}
@@ -141,7 +144,7 @@ func NewServer(logger *zap.Logger, md map[string]string, handler ServerHandler, 
 	}
 
 	s.grpc = grpc.NewServer(opts...)
-	pb.RegisterPeerServer(s.grpc, s)
+	pb.RegisterPeerApiServer(s.grpc, s)
 	service.RegisterChannelzServiceToServer(s.grpc)
 	grpc_prometheus.Register(s.grpc)
 	// Set grpc logger
@@ -167,14 +170,14 @@ func NewServer(logger *zap.Logger, md map[string]string, handler ServerHandler, 
 	return s
 }
 
-func (s *Server) Call(ctx context.Context, in *pb.Request) (*pb.ResponseWriter, error) {
+func (s *Server) Call(ctx context.Context, in *pb.Peer_Request) (*pb.Peer_ResponseWriter, error) {
 	if h, ok := s.handler.Load().(ServerHandler); ok && h != nil {
 		return h.Call(ctx, in)
 	}
 	return nil, status.Error(codes.Internal, "Missing handler")
 }
 
-func (s *Server) Stream(stream pb.Peer_StreamServer) error {
+func (s *Server) Stream(stream pb.PeerApi_StreamServer) error {
 	md, ok := metadata.FromIncomingContext(stream.Context())
 	if !ok || (len(md["node"]) == 0 || len(md["role"]) == 0) {
 		return status.Error(codes.InvalidArgument, "Missing metadata")
@@ -188,7 +191,7 @@ func (s *Server) Stream(stream pb.Peer_StreamServer) error {
 	}
 
 	conn := NewLocalConnector(s.ctx, s.logger, node, role, stream, s.config.GetGrpc().MessageQueueSize, handler, s.config.GetGrpc().AllowRetry, s.config.GetGrpc().RetryTimeout)
-	var histroy []*pb.ResponseWriter
+	var histroy []*pb.Peer_ResponseWriter
 	oldConn, ok := s.connectorRegistry.Get(conn.ID())
 	s.connectorRegistry.Add(conn)
 	if ok {

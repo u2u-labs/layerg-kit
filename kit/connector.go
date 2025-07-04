@@ -32,11 +32,11 @@ type (
 		ID() string
 		Role() string
 		Context() context.Context
-		Consume(histroy []*pb.ResponseWriter) bool
-		Write(msg *pb.ResponseWriter, opts ...ConnectorWriteOption) error
+		Consume(histroy []*pb.Peer_ResponseWriter) bool
+		Write(msg *pb.Peer_ResponseWriter, opts ...ConnectorWriteOption) error
 		Close()
 		State() int
-		RetryOk() []*pb.ResponseWriter
+		RetryOk() []*pb.Peer_ResponseWriter
 		CloseWithRetry()
 	}
 
@@ -45,13 +45,13 @@ type (
 		ctxCancelFn       context.CancelFunc
 		id                string
 		role              string
-		conn              pb.Peer_StreamServer
+		conn              pb.PeerApi_StreamServer
 		logger            *zap.Logger
-		outgoingCh        chan *pb.ResponseWriter
+		outgoingCh        chan *pb.Peer_ResponseWriter
 		state             *atomic.Int32
 		handler           ServerHandler
 		signalCh          *atomic.Pointer[chan struct{}]
-		waitMessages      []*pb.ResponseWriter
+		waitMessages      []*pb.Peer_ResponseWriter
 		waitCounter       *atomic.Int32
 		outgoingQueueSize int
 		allowRetry        bool
@@ -60,7 +60,7 @@ type (
 	}
 )
 
-func NewLocalConnector(ctx context.Context, logger *zap.Logger, id, role string, conn pb.Peer_StreamServer, outgoingQueueSize int, handler ServerHandler, allowRetry bool, retryTimeout int) Connector {
+func NewLocalConnector(ctx context.Context, logger *zap.Logger, id, role string, conn pb.PeerApi_StreamServer, outgoingQueueSize int, handler ServerHandler, allowRetry bool, retryTimeout int) Connector {
 	connectorLogger := logger.With(zap.String("id", id))
 	connectorLogger.Info("New connector connected", zap.String("role", role))
 	ctx, ctxCancelFn := context.WithCancel(ctx)
@@ -71,11 +71,11 @@ func NewLocalConnector(ctx context.Context, logger *zap.Logger, id, role string,
 		id:                id,
 		role:              role,
 		conn:              conn,
-		outgoingCh:        make(chan *pb.ResponseWriter, outgoingQueueSize),
+		outgoingCh:        make(chan *pb.Peer_ResponseWriter, outgoingQueueSize),
 		state:             atomic.NewInt32(ConnectorState_ALIVE),
 		handler:           handler,
 		signalCh:          atomic.NewPointer[chan struct{}](nil),
-		waitMessages:      make([]*pb.ResponseWriter, outgoingQueueSize),
+		waitMessages:      make([]*pb.Peer_ResponseWriter, outgoingQueueSize),
 		waitCounter:       atomic.NewInt32(0),
 		outgoingQueueSize: outgoingQueueSize,
 		allowRetry:        allowRetry,
@@ -99,14 +99,14 @@ func (s *LocalConnector) State() int {
 	return int(s.state.Load())
 }
 
-func (s *LocalConnector) RetryOk() []*pb.ResponseWriter {
+func (s *LocalConnector) RetryOk() []*pb.Peer_ResponseWriter {
 	state := s.state.Load()
 	if state != ConnectorState_WAITRETRY {
 		return nil
 	}
 
 	waitCounter := s.waitCounter.Load()
-	waitMssages := make([]*pb.ResponseWriter, waitCounter)
+	waitMssages := make([]*pb.Peer_ResponseWriter, waitCounter)
 	if waitCounter > 0 {
 		s.Lock()
 		copy(waitMssages[0:], s.waitMessages[0:waitCounter])
@@ -120,7 +120,7 @@ func (s *LocalConnector) RetryOk() []*pb.ResponseWriter {
 	return waitMssages
 }
 
-func (s *LocalConnector) Consume(histroy []*pb.ResponseWriter) bool {
+func (s *LocalConnector) Consume(histroy []*pb.Peer_ResponseWriter) bool {
 	go s.processOutgoing()
 	if histroy != nil {
 		go func() {
@@ -164,9 +164,9 @@ IncomingLoop:
 			return true
 		}
 
-		switch payload.Payload.(type) {
-		case *pb.Request_Ping:
-			if err := s.conn.Send(&pb.ResponseWriter{Payload: &pb.ResponseWriter_Pong{Pong: "PONG"}}); err != nil {
+		switch payload.GetCid() {
+		case "PING":
+			if err := s.conn.Send(&pb.Peer_ResponseWriter{Cid: "PONG"}); err != nil {
 				s.logger.Warn("failed to send ping", zap.Error(err))
 				break IncomingLoop
 			}
@@ -260,7 +260,7 @@ func (s *LocalConnector) CloseWithRetry() {
 	s.ctxCancelFn()
 }
 
-func (s *LocalConnector) Write(msg *pb.ResponseWriter, opts ...ConnectorWriteOption) error {
+func (s *LocalConnector) Write(msg *pb.Peer_ResponseWriter, opts ...ConnectorWriteOption) error {
 	for _, opt := range opts {
 		opt(msg)
 	}

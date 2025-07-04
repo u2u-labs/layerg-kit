@@ -36,7 +36,7 @@ var (
 )
 
 type (
-	ClientRecvHandler func(client Client, msg *pb.ResponseWriter)
+	ClientRecvHandler func(client Client, msg *pb.Peer_ResponseWriter)
 
 	ClientOptions struct {
 		// DialTimeout the timeout of create connection
@@ -113,9 +113,9 @@ type (
 		SetMetadata(meta *pb.NodeMeta)
 		Connected() (dialConnected bool, streamConnected bool)
 		Dial(md metadata.MD, clientOptions ...*ClientOptions) error
-		Handler(fn func(client Client, msg *pb.ResponseWriter))
-		Do(ctx context.Context, msg *pb.Request) (*pb.ResponseWriter, error)
-		Send(msg *pb.Request) error
+		Handler(fn func(client Client, msg *pb.Peer_ResponseWriter))
+		Do(ctx context.Context, msg *pb.Peer_Request) (*pb.Peer_ResponseWriter, error)
+		Send(msg *pb.Peer_Request) error
 		Close()
 	}
 
@@ -270,7 +270,7 @@ func (client *LocalClient) Dial(md metadata.MD, clientOptions ...*ClientOptions)
 		return ErrUnsupported
 	}
 
-	ch := make(chan *pb.ResponseWriter, opts.MessageQueueSize)
+	ch := make(chan *pb.Peer_ResponseWriter, opts.MessageQueueSize)
 	cc, err := NewClientConn(client.ctx, client.logger, client.Addr(), ch, md, client.newDial(opts), opts)
 	if err != nil {
 		return err
@@ -281,11 +281,11 @@ func (client *LocalClient) Dial(md metadata.MD, clientOptions ...*ClientOptions)
 	return nil
 }
 
-func (client *LocalClient) Handler(fn func(client Client, msg *pb.ResponseWriter)) {
+func (client *LocalClient) Handler(fn func(client Client, msg *pb.Peer_ResponseWriter)) {
 	client.recvFn.Store(fn)
 }
 
-func (client *LocalClient) Do(ctx context.Context, msg *pb.Request) (*pb.ResponseWriter, error) {
+func (client *LocalClient) Do(ctx context.Context, msg *pb.Peer_Request) (*pb.Peer_ResponseWriter, error) {
 	p, ok := client.getPool()
 	if !ok {
 		return nil, ErrNotConnected
@@ -297,10 +297,17 @@ func (client *LocalClient) Do(ctx context.Context, msg *pb.Request) (*pb.Respons
 	}
 
 	defer conn.Close()
-	return pb.NewPeerClient(conn.Value()).Call(ctx, msg)
+	resp, err := pb.NewPeerApiClient(conn.Value()).Call(ctx, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Cid = msg.GetCid()
+	resp.Name = msg.GetName()
+	return resp, nil
 }
 
-func (client *LocalClient) Send(msg *pb.Request) error {
+func (client *LocalClient) Send(msg *pb.Peer_Request) error {
 	conn, ok := client.getStreamClient()
 	if !ok {
 		return ErrNotConnected
@@ -337,7 +344,7 @@ func (client *LocalClient) Close() {
 	})
 }
 
-func (client *LocalClient) recv(ch chan *pb.ResponseWriter) {
+func (client *LocalClient) recv(ch chan *pb.Peer_ResponseWriter) {
 	for {
 		select {
 		case <-client.ctx.Done():

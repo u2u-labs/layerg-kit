@@ -47,11 +47,11 @@ type ClientConn struct {
 	ctxCancelFn      context.CancelFunc
 	logger           *zap.Logger
 	addr             string
-	stream           pb.Peer_StreamClient
+	stream           pb.PeerApi_StreamClient
 	cc               *grpc.ClientConn
 	dialFn           func(address string) (*grpc.ClientConn, error)
 	md               metadata.MD
-	outgoingCh       chan *pb.ResponseWriter
+	outgoingCh       chan *pb.Peer_ResponseWriter
 	lastRecvPacketAt *atomic.Time
 	state            *atomic.Int32
 	heartbeatTimeout time.Duration
@@ -60,7 +60,7 @@ type ClientConn struct {
 	sync.Mutex
 }
 
-func NewClientConn(ctx context.Context, logger *zap.Logger, addr string, outgoingCh chan *pb.ResponseWriter, md metadata.MD, dialFn func(address string) (*grpc.ClientConn, error), opt *ClientOptions) (*ClientConn, error) {
+func NewClientConn(ctx context.Context, logger *zap.Logger, addr string, outgoingCh chan *pb.Peer_ResponseWriter, md metadata.MD, dialFn func(address string) (*grpc.ClientConn, error), opt *ClientOptions) (*ClientConn, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	cc := &ClientConn{
 		ctx:              ctx,
@@ -84,7 +84,7 @@ func NewClientConn(ctx context.Context, logger *zap.Logger, addr string, outgoin
 		return nil, err
 	}
 
-	streamClient, err := pb.NewPeerClient(conn).Stream(metadata.NewOutgoingContext(ctx, md))
+	streamClient, err := pb.NewPeerApiClient(conn).Stream(metadata.NewOutgoingContext(ctx, md))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (cc *ClientConn) Close() {
 	})
 }
 
-func (cc *ClientConn) Write(msg *pb.Request) error {
+func (cc *ClientConn) Write(msg *pb.Peer_Request) error {
 	state := cc.state.Load()
 	if state == ConnectState_STOPED {
 		return ErrNotConnected
@@ -174,17 +174,20 @@ func (cc *ClientConn) processRecvMsg() {
 			return
 		}
 
-		switch out.Payload.(type) {
-		case *pb.ResponseWriter_Pong:
+		switch out.GetCid() {
+		case "PONG":
 			select {
 			case <-cc.ctx.Done():
 				return
+
 			default:
 			}
+
 		default:
 			select {
 			case <-cc.ctx.Done():
 				return
+
 			case cc.outgoingCh <- out:
 			default:
 				cc.logger.Error("outgoingCh is full")
@@ -220,10 +223,7 @@ func (cc *ClientConn) processHeartbeat() {
 }
 
 func (cc *ClientConn) sendHeartbeat() {
-	msg := &pb.Request{
-		Payload: &pb.Request_Ping{Ping: "PING"},
-	}
-
+	msg := &pb.Peer_Request{Cid: "PING"}
 	cc.Lock()
 	stream := cc.stream
 	cc.Unlock()
@@ -237,7 +237,7 @@ func (cc *ClientConn) retry() bool {
 		return false
 	}
 
-	streamClient, err := pb.NewPeerClient(conn).Stream(metadata.NewOutgoingContext(cc.ctx, cc.md))
+	streamClient, err := pb.NewPeerApiClient(conn).Stream(metadata.NewOutgoingContext(cc.ctx, cc.md))
 	if err != nil {
 		cc.logger.Warn("retry failed", zap.Error(err), zap.String("addr", cc.addr))
 		return false

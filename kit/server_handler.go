@@ -12,7 +12,7 @@ import (
 )
 
 type ServerHandler interface {
-	Call(ctx context.Context, in *pb.Request) (*pb.ResponseWriter, error)
-	NotifyMsg(conn Connector, in *pb.Request)
+	Call(ctx context.Context, in *pb.Peer_Request) (*pb.Peer_ResponseWriter, error)
+	NotifyMsg(conn Connector, in *pb.Peer_Request)
 	OnServiceUpdate(serviceRegistry ServiceRegistry, client Client)
 }

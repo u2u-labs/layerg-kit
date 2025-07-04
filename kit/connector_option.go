@@ -8,11 +8,11 @@ package kit
 import "github.com/u2u-labs/layerg-kit/pb"
 
 type (
-	ConnectorWriteOption func(msg *pb.ResponseWriter)
+	ConnectorWriteOption func(msg *pb.Peer_ResponseWriter)
 )
 
-func WithConnectorWriteNoCache() func(msg *pb.ResponseWriter) {
-	return func(msg *pb.ResponseWriter) {
+func WithConnectorWriteNoCache() func(msg *pb.Peer_ResponseWriter) {
+	return func(msg *pb.Peer_ResponseWriter) {
 		if msg.Context == nil {
 			msg.Context = make(map[string]string)
 		}

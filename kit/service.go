@@ -30,8 +30,8 @@ type (
 		GetClientByRoundRobin() (Client, bool)
 		GetClientByRandom() (Client, bool)
 		GetClientByName(name string) (Client, bool)
-		Do(ctx context.Context, msg *pb.Request) (*pb.ResponseWriter, error)
-		Send(msg *pb.Request) error
+		Do(ctx context.Context, msg *pb.Peer_Request) (*pb.Peer_ResponseWriter, error)
+		Send(msg *pb.Peer_Request) error
 		Count() int64
 		Exist(name string) (ok bool)
 		Stop()
@@ -228,7 +228,7 @@ func (s *LocalService) GetClientByRandom() (Client, bool) {
 	return nil, false
 }
 
-func (s *LocalService) Do(ctx context.Context, msg *pb.Request) (*pb.ResponseWriter, error) {
+func (s *LocalService) Do(ctx context.Context, msg *pb.Peer_Request) (*pb.Peer_ResponseWriter, error) {
 	client, ok := s.GetClientByBalancer()
 	if !ok {
 		return nil, ErrNotConnected
@@ -236,7 +236,7 @@ func (s *LocalService) Do(ctx context.Context, msg *pb.Request) (*pb.ResponseWri
 	return client.Do(ctx, msg)
 }
 
-func (s *LocalService) Send(msg *pb.Request) error {
+func (s *LocalService) Send(msg *pb.Peer_Request) error {
 	client, ok := s.GetClientByBalancer()
 	if !ok {
 		return ErrNotConnected
